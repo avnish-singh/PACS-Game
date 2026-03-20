@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PACS Engineer — Hospital Routing Puzzle</title>
+  <meta name="description" content="A web-based puzzle game simulating hospital PACS imaging workflow and DICOM routing."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ═══ SCANLINE OVERLAY ═══ -->
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- ═══ SCREENS ═══ -->
+
+<!-- TITLE SCREEN -->
+<div id="screen-title" class="screen active">
+  <div class="title-bg" aria-hidden="true">
+    <div class="title-grid"></div>
+    <div class="pulse-ring r1"></div>
+    <div class="pulse-ring r2"></div>
+    <div class="pulse-ring r3"></div>
+  </div>
+  <div class="title-content">
+    <div class="title-badge">HOSPITAL IMAGING SYSTEM v4.2</div>
+    <h1 class="game-title">
+      <span class="title-line1">PACS</span>
+      <span class="title-line2">ENGINEER</span>
+    </h1>
+    <p class="title-sub">CRITICAL SYSTEM FAILURE — DICOM ROUTES DISRUPTED</p>
+    <p class="title-desc">You are the on-call Implementation Engineer.<br/>Restore the hospital imaging workflow before patients are delayed.</p>
+    <div class="title-actions">
+      <button class="btn-primary" id="btnStart">▶ BEGIN DEPLOYMENT</button>
+      <button class="btn-ghost" id="btnLeaderboard">⬡ LEADERBOARD</button>
+      <button class="btn-ghost" id="btnHowTo">? HOW TO PLAY</button>
+    </div>
+    <div class="title-stats">
+      <div class="ts-item"><span id="tsBestScore">—</span><label>BEST SCORE</label></div>
+      <div class="ts-item"><span id="tsLevelsCleared">—</span><label>LEVELS CLEARED</label></div>
+      <div class="ts-item"><span id="tsGamesPlayed">—</span><label>GAMES PLAYED</label></div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW TO PLAY -->
+<div id="screen-howto" class="screen">
+  <div class="modal-box">
+    <h2 class="modal-title">HOW TO PLAY</h2>
+    <div class="howto-grid">
+      <div class="howto-item">
+        <span class="howto-num">01</span>
+        <h3>Connect Nodes</h3>
+        <p>Drag from an output port (►) to an input port to draw a data route between imaging nodes.</p>
+      </div>
+      <div class="howto-item">
+        <span class="howto-num">02</span>
+        <h3>Fix Config Errors</h3>
+        <p>Click misconfigured nodes to open their config panel. Enter correct IPs, ports, and AE Titles.</p>
+      </div>
+      <div class="howto-item">
+        <span class="howto-num">03</span>
+        <h3>Route Studies</h3>
+        <p>Studies appear in the patient queue. Drag them to the correct destination storage or viewer.</p>
+      </div>
+      <div class="howto-item">
+        <span class="howto-num">04</span>
+        <h3>Manage Storage</h3>
+        <p>Move studies between PACS, Archive, and Cloud before storage capacity reaches 100%.</p>
+      </div>
+      <div class="howto-item">
+        <span class="howto-num">05</span>
+        <h3>Beat the Timer</h3>
+        <p>Each level has a countdown. Incomplete workflows cause study failures and score penalties.</p>
+      </div>
+      <div class="howto-item">
+        <span class="howto-num">06</span>
+        <h3>Emergency Mode</h3>
+        <p>Random STAT cases arrive with a 30-second critical timer. Prioritize them for bonus points.</p>
+      </div>
+    </div>
+    <button class="btn-primary" id="btnHowToBack">← BACK</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="screen-leaderboard" class="screen">
+  <div class="modal-box wide">
+    <h2 class="modal-title">⬡ LEADERBOARD</h2>
+    <div class="lb-header-row">
+      <span>RANK</span><span>NAME</span><span>SCORE</span><span>LEVELS</span><span>DATE</span>
+    </div>
+    <div id="lbList" class="lb-list"></div>
+    <div class="lb-actions">
+      <button class="btn-ghost" id="btnClearLB">✕ CLEAR</button>
+      <button class="btn-primary" id="btnLBBack">← BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="screen-game" class="screen">
+
+  <!-- HUD -->
+  <header class="hud">
+    <div class="hud-left">
+      <div class="hud-logo">PACS<span>ENG</span></div>
+      <div class="hud-level">
+        <span class="hud-label">LEVEL</span>
+        <span id="hudLevel" class="hud-val">01</span>
+      </div>
+      <div class="hud-level">
+        <span class="hud-label">OBJECTIVE</span>
+        <span id="hudObjective" class="hud-val small">—</span>
+      </div>
+    </div>
+    <div class="hud-center">
+      <div class="timer-ring">
+        <svg viewBox="0 0 80 80">
+          <circle class="timer-bg" cx="40" cy="40" r="34"/>
+          <circle class="timer-fill" id="timerCircle" cx="40" cy="40" r="34"/>
+        </svg>
+        <div class="timer-num" id="timerNum">60</div>
+      </div>
+      <!-- Emergency banner -->
+      <div class="emergency-banner" id="emergencyBanner">
+        🚨 STAT CASE — <span id="emergencyDesc">CRITICAL CT</span> — <span id="emergencyTimer">30</span>s
+      </div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-score">
+        <span class="hud-label">SCORE</span>
+        <span id="hudScore" class="hud-val">0</span>
+      </div>
+      <div class="hud-score">
+        <span class="hud-label">STUDIES OK</span>
+        <span id="hudStudiesOk" class="hud-val green">0</span>
+      </div>
+      <button class="btn-ghost sm" id="btnPause">⏸</button>
+      <button class="btn-ghost sm" id="btnQuit">✕</button>
+    </div>
+  </header>
+
+  <!-- GAME AREA -->
+  <div class="game-area" id="gameArea">
+
+    <!-- CANVAS for connection lines -->
+    <canvas id="connectionCanvas"></canvas>
+
+    <!-- NODES container -->
+    <div id="nodesContainer"></div>
+
+    <!-- PATIENT QUEUE PANEL -->
+    <aside class="queue-panel" id="queuePanel">
+      <div class="qp-title">
+        <span>STUDY QUEUE</span>
+        <span id="queueCount" class="qp-count">0</span>
+      </div>
+      <div id="studyQueue" class="study-list"></div>
+    </aside>
+
+    <!-- STORAGE PANEL -->
+    <aside class="storage-panel" id="storagePanel">
+      <div class="sp-title">STORAGE STATUS</div>
+      <div class="storage-bar-wrap">
+        <label>PACS Primary</label>
+        <div class="storage-bar"><div id="barPacs" class="sb-fill pacs" style="width:0%"></div></div>
+        <span id="pctPacs" class="sb-pct">0%</span>
+      </div>
+      <div class="storage-bar-wrap">
+        <label>Archive</label>
+        <div class="storage-bar"><div id="barArchive" class="sb-fill archive" style="width:0%"></div></div>
+        <span id="pctArchive" class="sb-pct">0%</span>
+      </div>
+      <div class="storage-bar-wrap">
+        <label>Cloud Backup</label>
+        <div class="storage-bar"><div id="barCloud" class="sb-fill cloud" style="width:0%"></div></div>
+        <span id="pctCloud" class="sb-pct">0%</span>
+      </div>
+      <div class="sp-legend">
+        <span class="legend-item ok">● HEALTHY</span>
+        <span class="legend-item warn">● WARNING</span>
+        <span class="legend-item crit">● CRITICAL</span>
+      </div>
+    </aside>
+
+    <!-- MESSAGE LOG -->
+    <div class="msg-log" id="msgLog">
+      <div class="ml-title">SYSTEM LOG</div>
+      <div id="msgList" class="ml-list"></div>
+    </div>
+
+  </div><!-- /game-area -->
+
+  <!-- CONFIG PANEL (modal overlay) -->
+  <div id="configPanel" class="config-overlay hidden">
+    <div class="config-box">
+      <div class="config-title" id="configTitle">NODE CONFIG</div>
+      <div id="configFields" class="config-fields"></div>
+      <div class="config-actions">
+        <button class="btn-ghost" id="btnConfigClose">CANCEL</button>
+        <button class="btn-primary" id="btnConfigSave">APPLY CONFIG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUSE OVERLAY -->
+  <div id="pauseOverlay" class="pause-overlay hidden">
+    <div class="pause-box">
+      <div class="pause-title">⏸ PAUSED</div>
+      <button class="btn-primary" id="btnResume">▶ RESUME</button>
+      <button class="btn-ghost" id="btnPauseQuit">✕ QUIT TO MENU</button>
+    </div>
+  </div>
+
+</div><!-- /screen-game -->
+
+<!-- LEVEL COMPLETE -->
+<div id="screen-levelcomplete" class="screen">
+  <div class="result-box">
+    <div class="result-badge success">LEVEL COMPLETE</div>
+    <h2 id="lcTitle">SYSTEMS RESTORED</h2>
+    <div class="result-stats">
+      <div class="rs-item"><span id="lcScore">0</span><label>SCORE</label></div>
+      <div class="rs-item"><span id="lcTime">0s</span><label>TIME LEFT</label></div>
+      <div class="rs-item"><span id="lcStudies">0</span><label>STUDIES ROUTED</label></div>
+      <div class="rs-item"><span id="lcAccuracy">0%</span><label>ACCURACY</label></div>
+    </div>
+    <div class="stars-row" id="starsRow"></div>
+    <div class="result-actions">
+      <button class="btn-primary" id="btnNextLevel">NEXT LEVEL ►</button>
+      <button class="btn-ghost" id="btnRetryLC">↺ RETRY</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="screen-gameover" class="screen">
+  <div class="result-box">
+    <div class="result-badge fail">SYSTEM FAILURE</div>
+    <h2>IMAGING WORKFLOW CRASHED</h2>
+    <p class="result-desc" id="goReason">The hospital imaging system has gone offline.</p>
+    <div class="result-stats">
+      <div class="rs-item"><span id="goScore">0</span><label>FINAL SCORE</label></div>
+      <div class="rs-item"><span id="goLevel">1</span><label>LEVEL REACHED</label></div>
+    </div>
+    <div class="name-entry">
+      <label>ENTER YOUR CALLSIGN</label>
+      <input type="text" id="nameInput" maxlength="12" placeholder="ENGINEER_01" autocomplete="off"/>
+    </div>
+    <div class="result-actions">
+      <button class="btn-primary" id="btnSaveScore">SAVE TO LEADERBOARD</button>
+      <button class="btn-ghost" id="btnRetryGO">↺ TRY AGAIN</button>
+      <button class="btn-ghost" id="btnGoMenu">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATIONS -->
+<div id="toastContainer" class="toast-container" aria-live="assertive"></div>
+
+<script src="levels.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
